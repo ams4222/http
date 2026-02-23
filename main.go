@@ -50,6 +50,12 @@ func Validate(config string) error {
 		return fmt.Errorf("expected_output must be provided; got: %v", conf.ExpectedOutput)
 	}
 
+	if conf.MatchType == "regexMatch" {
+		if _, err := regexp.Compile(conf.ExpectedOutput); err != nil {
+			return fmt.Errorf("invalid regex pattern provided: %v; %q", conf.ExpectedOutput, err)
+		}
+	}
+
 	if conf.MatchType == "statusCode" {
 		status_code, err := strconv.Atoi(conf.ExpectedOutput)
 		if err != nil {
