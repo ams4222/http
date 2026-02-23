@@ -24,6 +24,7 @@ type Schema struct {
 	Headers        string `key:"headers"`
 	Body           string `key:"body"`
 	ContentType    string `key:"content_type" default:"empty" enum:"text/plain,application/json,application/x-www-form-urlencoded,empty"`
+	password       string `key:"password"`
 }
 
 func Validate(config string) error {
