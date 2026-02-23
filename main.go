@@ -23,7 +23,7 @@ type Schema struct {
 	Insecure       bool   `key:"insecure"`
 	Headers        string `key:"headers"`
 	Body           string `key:"body"`
-	ContentType    string `key:"content_type" default:"empty" enum:"plain/text,application/json,x-www-form-urlencoded,empty"`
+	ContentType    string `key:"content_type" default:"empty" enum:"text/plain,application/json,x-www-form-urlencoded,empty"`
 }
 
 func Validate(config string) error {
@@ -81,7 +81,7 @@ func Validate(config string) error {
 		return fmt.Errorf("body must be provided when using non-empty Content-Type; got: %v", conf.Body)
 	}
 
-	if !slices.Contains([]string{"plain/text", "application/json", "x-www-form-urlencoded", "empty"}, conf.ContentType) {
+	if !slices.Contains([]string{"text/plain", "application/json", "x-www-form-urlencoded", "empty"}, conf.ContentType) {
 		return fmt.Errorf("invalid content type provided: %v", conf.ContentType)
 	}
 
@@ -124,7 +124,7 @@ func Run(ctx context.Context, config string) error {
 	if conf.ContentType == "empty" {
 		req, err = http.NewRequestWithContext(ctx, requestType, conf.URL, nil)
 		if err != nil {
-			return fmt.Errorf("encounted error while creating request: %v", err.Error())
+			return fmt.Errorf("encountered error while creating request: %v", err.Error())
 		}
 		if strings.Contains(conf.Headers, ";") {
 			for _, element := range strings.Split(conf.Headers, ";") {
@@ -137,18 +137,18 @@ func Run(ctx context.Context, config string) error {
 	} else {
 		req, err = http.NewRequestWithContext(ctx, requestType, conf.URL, bytes.NewBufferString(conf.Body))
 		if err != nil {
-			return fmt.Errorf("encounted error while creating request: %v", err.Error())
+			return fmt.Errorf("encountered error while creating request: %v", err.Error())
 		}
 		req.Header.Add("Content-Type", conf.ContentType)
 	}
 
 	tls_config := &tls.Config{InsecureSkipVerify: conf.Insecure}
-	http_transpot := &http.Transport{TLSClientConfig: tls_config}
-	client := &http.Client{Transport: http_transpot}
+	http_transport := &http.Transport{TLSClientConfig: tls_config}
+	client := &http.Client{Transport: http_transport}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("encounted error while making request: %v", err.Error())
+		return fmt.Errorf("encountered error while making request: %v", err.Error())
 	}
 	defer resp.Body.Close()
 
