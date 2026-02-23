@@ -123,23 +123,32 @@ func Run(ctx context.Context, config string) error {
 	var req *http.Request
 	if conf.ContentType == "empty" {
 		req, err = http.NewRequestWithContext(ctx, requestType, conf.URL, nil)
-		if err != nil {
-			return fmt.Errorf("encountered error while creating request: %v", err.Error())
-		}
-		if strings.Contains(conf.Headers, ";") {
-			for _, element := range strings.Split(conf.Headers, ";") {
-				req.Header.Add(strings.Split(element, ":")[0], strings.Split(element, ":")[1])
-			}
-		} else {
-			req.Header.Add(strings.Split(conf.Headers, ":")[0], strings.Split(conf.Headers, ":")[1])
-		}
-
 	} else {
 		req, err = http.NewRequestWithContext(ctx, requestType, conf.URL, bytes.NewBufferString(conf.Body))
-		if err != nil {
-			return fmt.Errorf("encountered error while creating request: %v", err.Error())
+	}
+	if err != nil {
+		return fmt.Errorf("encountered error while creating request: %v", err.Error())
+	}
+
+	if conf.ContentType != "empty" {
+		req.Header.Set("Content-Type", conf.ContentType)
+	}
+
+	if conf.Headers != "" {
+		for _, raw := range strings.Split(conf.Headers, ";") {
+			raw = strings.TrimSpace(raw)
+			if raw == "" {
+				continue
+			}
+			parts := strings.SplitN(raw, ":", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key, value := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+			if key != "" && value != "" {
+				req.Header.Add(key, value)
+			}
 		}
-		req.Header.Add("Content-Type", conf.ContentType)
 	}
 
 	tls_config := &tls.Config{InsecureSkipVerify: conf.Insecure}
