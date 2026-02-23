@@ -23,7 +23,7 @@ type Schema struct {
 	Insecure       bool   `key:"insecure"`
 	Headers        string `key:"headers"`
 	Body           string `key:"body"`
-	ContentType    string `key:"content_type" default:"empty" enum:"plain/text,application/json,x-www-form-urlencoded,empty"`
+	ContentType    string `key:"content_type" default:"empty" enum:"text/plain,application/json,application/x-www-form-urlencoded,empty"`
 }
 
 func Validate(config string) error {
@@ -48,6 +48,12 @@ func Validate(config string) error {
 
 	if conf.ExpectedOutput == "" {
 		return fmt.Errorf("expected_output must be provided; got: %v", conf.ExpectedOutput)
+	}
+
+	if conf.MatchType == "regexMatch" {
+		if _, err := regexp.Compile(conf.ExpectedOutput); err != nil {
+			return fmt.Errorf("invalid regex pattern provided: %v; %q", conf.ExpectedOutput, err)
+		}
 	}
 
 	if conf.MatchType == "statusCode" {
@@ -81,7 +87,7 @@ func Validate(config string) error {
 		return fmt.Errorf("body must be provided when using non-empty Content-Type; got: %v", conf.Body)
 	}
 
-	if !slices.Contains([]string{"plain/text", "application/json", "x-www-form-urlencoded", "empty"}, conf.ContentType) {
+	if !slices.Contains([]string{"text/plain", "application/json", "application/x-www-form-urlencoded", "empty"}, conf.ContentType) {
 		return fmt.Errorf("invalid content type provided: %v", conf.ContentType)
 	}
 
@@ -123,32 +129,43 @@ func Run(ctx context.Context, config string) error {
 	var req *http.Request
 	if conf.ContentType == "empty" {
 		req, err = http.NewRequestWithContext(ctx, requestType, conf.URL, nil)
-		if err != nil {
-			return fmt.Errorf("encounted error while creating request: %v", err.Error())
-		}
-		if strings.Contains(conf.Headers, ";") {
-			for _, element := range strings.Split(conf.Headers, ";") {
-				req.Header.Add(strings.Split(element, ":")[0], strings.Split(element, ":")[1])
-			}
-		} else {
-			req.Header.Add(strings.Split(conf.Headers, ":")[0], strings.Split(conf.Headers, ":")[1])
-		}
-
 	} else {
 		req, err = http.NewRequestWithContext(ctx, requestType, conf.URL, bytes.NewBufferString(conf.Body))
-		if err != nil {
-			return fmt.Errorf("encounted error while creating request: %v", err.Error())
+	}
+	if err != nil {
+		return fmt.Errorf("encountered error while creating request: %v", err.Error())
+	}
+
+	if conf.ContentType != "empty" {
+		req.Header.Set("Content-Type", conf.ContentType)
+	}
+
+	if conf.Headers != "" {
+		for _, raw := range strings.Split(conf.Headers, ";") {
+			raw = strings.TrimSpace(raw)
+			if raw == "" {
+				continue
+			}
+			parts := strings.SplitN(raw, ":", 2)
+			if len(parts) != 2 {
+				continue
+			}
+			key, value := strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])
+			if key != "" && value != "" {
+				req.Header.Add(key, value)
+			}
 		}
-		req.Header.Add("Content-Type", conf.ContentType)
 	}
 
 	tls_config := &tls.Config{InsecureSkipVerify: conf.Insecure}
-	http_transpot := &http.Transport{TLSClientConfig: tls_config}
-	client := &http.Client{Transport: http_transpot}
+	http_transport := &http.Transport{TLSClientConfig: tls_config}
+	client := &http.Client{Transport: http_transport}
+
+	defer http_transport.CloseIdleConnections()
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("encounted error while making request: %v", err.Error())
+		return fmt.Errorf("encountered error while making request: %v", err.Error())
 	}
 	defer resp.Body.Close()
 
