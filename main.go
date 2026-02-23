@@ -23,7 +23,7 @@ type Schema struct {
 	Insecure       bool   `key:"insecure"`
 	Headers        string `key:"headers"`
 	Body           string `key:"body"`
-	ContentType    string `key:"content_type" default:"empty" enum:"text/plain,application/json,x-www-form-urlencoded,empty"`
+	ContentType    string `key:"content_type" default:"empty" enum:"text/plain,application/json,application/x-www-form-urlencoded,empty"`
 }
 
 func Validate(config string) error {
@@ -81,7 +81,7 @@ func Validate(config string) error {
 		return fmt.Errorf("body must be provided when using non-empty Content-Type; got: %v", conf.Body)
 	}
 
-	if !slices.Contains([]string{"text/plain", "application/json", "x-www-form-urlencoded", "empty"}, conf.ContentType) {
+	if !slices.Contains([]string{"text/plain", "application/json", "application/x-www-form-urlencoded", "empty"}, conf.ContentType) {
 		return fmt.Errorf("invalid content type provided: %v", conf.ContentType)
 	}
 
