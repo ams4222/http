@@ -161,6 +161,8 @@ func Run(ctx context.Context, config string) error {
 	http_transport := &http.Transport{TLSClientConfig: tls_config}
 	client := &http.Client{Transport: http_transport}
 
+	defer http_transport.CloseIdleConnections()
+
 	resp, err := client.Do(req)
 	if err != nil {
 		return fmt.Errorf("encountered error while making request: %v", err.Error())
