@@ -105,6 +105,16 @@ func Run(ctx context.Context, config string) error {
 
 	// Support user-editable password placeholders in request body.
 	conf.Body = strings.ReplaceAll(conf.Body, "{{password}}", conf.Password)
+	conf.Body = strings.ReplaceAll(conf.Body, "{{ password }}", conf.Password)
+
+	// Support team placeholders in body by deriving team number from URL.
+	team := teamFromURL(conf.URL)
+	if team != "" {
+		conf.Body = strings.ReplaceAll(conf.Body, "{{team}}", team)
+		conf.Body = strings.ReplaceAll(conf.Body, "{{ team }}", team)
+		conf.Body = strings.ReplaceAll(conf.Body, `{{ format "%02d" .Number }}`, team)
+		conf.Body = strings.ReplaceAll(conf.Body, `{{format "%02d" .Number}}`, team)
+	}
 
 	var requestType string
 
@@ -221,4 +231,19 @@ func Run(ctx context.Context, config string) error {
 	}
 
 	return nil
+}
+
+func teamFromURL(url string) string {
+	re := regexp.MustCompile(`(?i)team([0-9]{1,3})`)
+	match := re.FindStringSubmatch(url)
+	if len(match) != 2 {
+		return ""
+	}
+
+	n, err := strconv.Atoi(match[1])
+	if err != nil {
+		return ""
+	}
+
+	return fmt.Sprintf("%02d", n)
 }
