@@ -103,6 +103,8 @@ func Run(ctx context.Context, config string) error {
 		return err
 	}
 
+	conf.Body = strings.ReplaceAll(conf.Body, "{{password}}", conf.Password)
+
 	var requestType string
 
 	switch conf.Verb {
