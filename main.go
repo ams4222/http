@@ -1,4 +1,4 @@
-package http
+package httpauth
 
 import (
 	"bytes"
@@ -58,13 +58,13 @@ func Validate(config string) error {
 	}
 
 	if conf.MatchType == "statusCode" {
-		status_code, err := strconv.Atoi(conf.ExpectedOutput)
+		statusCode, err := strconv.Atoi(conf.ExpectedOutput)
 		if err != nil {
 			return fmt.Errorf("invalid status code provided: %v; %q", conf.ExpectedOutput, err)
 		}
 
-		if status_code < 100 || status_code > 599 {
-			return fmt.Errorf("invalid status code provided: %d", status_code)
+		if statusCode < 100 || statusCode > 599 {
+			return fmt.Errorf("invalid status code provided: %d", statusCode)
 		}
 	}
 
@@ -103,6 +103,7 @@ func Run(ctx context.Context, config string) error {
 		return err
 	}
 
+	// Support user-editable password placeholders in request body.
 	conf.Body = strings.ReplaceAll(conf.Body, "{{password}}", conf.Password)
 
 	var requestType string
@@ -129,6 +130,7 @@ func Run(ctx context.Context, config string) error {
 	default:
 		return fmt.Errorf("provided invalid command/http verb: %q", conf.Verb)
 	}
+
 	var req *http.Request
 	if conf.ContentType == "empty" {
 		req, err = http.NewRequestWithContext(ctx, requestType, conf.URL, nil)
@@ -160,11 +162,11 @@ func Run(ctx context.Context, config string) error {
 		}
 	}
 
-	tls_config := &tls.Config{InsecureSkipVerify: conf.Insecure}
-	http_transport := &http.Transport{TLSClientConfig: tls_config}
-	client := &http.Client{Transport: http_transport}
+	tlsConfig := &tls.Config{InsecureSkipVerify: conf.Insecure}
+	httpTransport := &http.Transport{TLSClientConfig: tlsConfig}
+	client := &http.Client{Transport: httpTransport}
 
-	defer http_transport.CloseIdleConnections()
+	defer httpTransport.CloseIdleConnections()
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -174,13 +176,13 @@ func Run(ctx context.Context, config string) error {
 
 	switch conf.MatchType {
 	case "statusCode":
-		status_code, err := strconv.Atoi(conf.ExpectedOutput)
+		statusCode, err := strconv.Atoi(conf.ExpectedOutput)
 		if err != nil {
 			return fmt.Errorf("invalid status code provided: %v; %q", conf.ExpectedOutput, err)
 		}
 
-		if resp.StatusCode != status_code {
-			return fmt.Errorf("expected status code: %d; got: %d", status_code, resp.StatusCode)
+		if resp.StatusCode != statusCode {
+			return fmt.Errorf("expected status code: %d; got: %d", statusCode, resp.StatusCode)
 		}
 	case "substringMatch":
 		body, err := io.ReadAll(resp.Body)
